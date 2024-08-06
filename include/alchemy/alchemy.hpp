@@ -115,18 +115,29 @@ enum class Key_Action {
 };
 
 struct Canvas {
-    // Objects
+    // * Objects
     std::vector<std::unique_ptr<Object> > objects;
-    // Lighting
+    // * Lighting
     Point3D light_pos;
-    // Camera
+    // * Camera
     Camera camera;
     
-    // Aesthetics
+    // * Aesthetics
     std::string title = "untitled";
 
     // Background color
     Color background;
+    // * Render params
+    // Axes? (a)
+    bool draw_axes = true;
+    // Wireframe mode? (w)
+    bool wireframe = false;
+    // Backface culling? (c)
+    bool cull_face = true;
+    // Whether to wait for event on loop
+    // true: loops on user input (glfwWaitEvents), saves power and computation
+    // false: loops continuously (glfwPollEvents), useful for e.g. animation
+    bool loop_wait_events = true;
 
     // * Events
     // Called after GL cnotext init
@@ -145,7 +156,7 @@ struct Canvas {
     std::function<bool(double, double)> on_scroll;
 
     // * other
-    int     _width, _height;
+    int     _width = 800, _height = 600;
     double  _mouse_x, _mouse_y;
     int     _mouse_button = -1;
 
@@ -155,7 +166,7 @@ struct Canvas {
     // True only during the render loop (show())
     bool _looping = false;
 
-    Canvas();
+    Canvas() {}
     ~Canvas();
     
     void show();

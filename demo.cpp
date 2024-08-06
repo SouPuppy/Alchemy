@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     // const string demo_obj = "C:/Users/soupup/Desktop/Alchemy/source/cube.obj";
 
 
-    // ALCHEMY::Canvas viewer;
+    ALCHEMY::Canvas viewer;
     // ALCHEMY::Object& demo = viewer.add_obj(demo_obj);
 
     // 
@@ -39,6 +39,6 @@ int main(int argc, char **argv) {
     // }
 
 
-    // viewer.show();
+    viewer.show();
     return 0;
 }

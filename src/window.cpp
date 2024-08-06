@@ -5,36 +5,38 @@
 #include "alchemy/tensor.hpp"
 
 namespace ALCHEMY {
-Canvas::~Canvas() { glfwTerminate(); }
+Canvas::~Canvas() { 
+    glfwDestroyWindow((GLFWwindow*)_window);
+    _window = nullptr;
+    glfwTerminate();
+}
 
 void Canvas::show() {
-    GLFWwindow* window =
-        glfwCreateWindow(_width, _height, "meshview", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        std::cerr << "GLFW window creation failed\n";
-        return;
+    if (!glfwInit()) {
+        std::cerr << "GLFW initialization failed\n";
     }
+
+    GLFWwindow* window = glfwCreateWindow(_width, _height, title.c_str(), NULL, NULL);
+    if (!window) {
+        std::cerr << "GLFW window creation failed\n";
+        glfwTerminate();
+    }
+
     _window = (void*)window;
 
-    // camera.aspect = (float)_width / (float)_height;
+    camera.aspect = (float)_width / (float)_height;
     // camera.update_proj();
     // camera.update_view();
 
     glfwMakeContextCurrent(window);
-    
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "GLEW init failed\n";
-        getchar();
-        glfwTerminate();
-        return;
-    }
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_PROGRAM_POINT_SIZE);
-    glDepthFunc(GL_LESS);
-    // if (cull_face) glEnable(GL_CULL_FACE);
+    while (!glfwWindowShouldClose(window)) {
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glfwSwapBuffers(window);
+
+        glfwPollEvents();
+    }
 }
 
 }; // namespace ALCHEMY
