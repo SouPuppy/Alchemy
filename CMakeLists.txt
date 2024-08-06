@@ -16,6 +16,7 @@ option(BUILD_INSTALL "Build the install target" ON)
 option(USE_FFAST_MATH "Use -ffast-math" OFF)
 
 # Set C++ standard and stack size
+set( CMAKE_CXX_STACK_SIZE "10000000" )
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STACK_SIZE "10000000")
@@ -74,6 +75,10 @@ source_group("Header Files" FILES ${HEADERS})
 source_group("Source Files" FILES ${SOURCES})
 
 set( DEPENDENCIES )
+
+# OpenGL
+find_package(OpenGL REQUIRED)
+set( DEPENDENCIES ${DEPENDENCIES} OpenGL::GL )
 
 # GLFW
 set ( WILL_USE_SYSTEM_GLFW ${USE_SYSTEM_GLFW} )
