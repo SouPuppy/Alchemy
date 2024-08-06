@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <functional>
 
 #include <GLFW/glfw3.h>
 
@@ -14,6 +15,7 @@ using Vertex    = TENSOR::Matrix<float, 1, 3>;
 using Triangle  = TENSOR::Matrix<int  , 1, 3>;
 
 using Point3D   = TENSOR::Matrix<float, 1, 3>;
+using Norm3D    = TENSOR::Matrix<float, 1, 3>;
 using Color     = TENSOR::Vector<float, 3>;
 
 namespace ALCHEMY {
@@ -73,17 +75,43 @@ struct Light {
 
 };
 
-struct Frustum {
+struct Camera {
+
+    // Get camera position
+    inline Point3D get_pos() const { return pos; }
+    // Update view matrix, call after changing any view parameter
+    void update_view();
+    void update_proj();
+
+    // * Handlers
+    void rotate_with_mouse(float xoffset, float yoffset);
+    void roll_with_mouse(float xoffset, float yoffset);
+    void pan_with_mouse(float xoffset, float yoffset);
+    void zoom_with_mouse(float amount);
+
+    // Camera mouse control options
+    float pan_speed = .0015f, rotate_speed = .008f, scroll_factor = 1.1f;
+    // Euler angles, for mouse control
+    float yaw, pitch, roll;
+
+    // Reset the view
+    void reset_view();
+
+    bool ortho = false;
     // Field Of View
-    float FOV;
-    // Near Clip Plane
-    float NCP;
-    // Far Clip Plane
-    float FCP;
+    float FOV, aspect;
+    // Near Clip Plane, Far Clip Plane
+    float NCP, FCP;
+
+    float dist_to_center;
+
+    Norm3D world_up, camera_up;
+
+    Point3D pos;
 };
 
-struct Camera {
-    Frustum frustum;
+enum class Key_Action {
+    release, press, repeat
 };
 
 struct Canvas {
@@ -99,6 +127,33 @@ struct Canvas {
 
     // Background color
     Color background;
+
+    // * Events
+    // Called after GL cnotext init
+    std::function<void()> on_open;
+    // Called when window is about to close
+    std::function<void()> on_close;
+    // Called per iter of render loop, before on_gui
+    // return true if mesh/point cloud/camera data has been updated, false
+    // otherwise
+    std::function<bool()> on_loop;
+    
+    std::function<bool(int, Key_Action, int)> on_mouse_button;
+    // Called on mouse move: args(x, y) return false to prevent default
+    std::function<bool(double, double)> on_mouse_move;
+    // Called on mouse scroll: args(xoffset, yoffset) return false to prevent default
+    std::function<bool(double, double)> on_scroll;
+
+    // * other
+    int     _width, _height;
+    double  _mouse_x, _mouse_y;
+    int     _mouse_button = -1;
+
+    // ADNANCED: Pointer to GLFW window object
+    void* _window = nullptr;
+
+    // True only during the render loop (show())
+    bool _looping = false;
 
     Canvas();
     ~Canvas();

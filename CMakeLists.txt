@@ -27,6 +27,7 @@ set( INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 set( SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src" )
 set( VENDOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external" )
 set( GLFW_DIR "${VENDOR_DIR}/glfw" )
+set( GLEW_DIR "${VENDOR_DIR}/glew" )
 
 # Lib name
 set( PROJ_LIB_NAME "alchemy" )
@@ -58,6 +59,8 @@ if(NOT EXISTS "${GLFW_DIR}/CMakeLists.txt")
    message(FATAL_ERROR "A submodule as not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
+add_definitions(-DGLEW_STATIC)
+
 # Gather sources and headers
 file(GLOB SOURCES ${SRC_DIR}/*.cpp)
 file(GLOB PUBLIC_HEADERS ${INCLUDE_DIR}/alchemy/*.hpp)
@@ -70,9 +73,17 @@ list(APPEND PUBLIC_HEADERS "${COMMON_HPP_PATH}")
 
 set(HEADERS ${PUBLIC_HEADERS} ${PRIVATE_HEADERS})
 
+set( VENDOR_SOURCES
+    ${GLEW_DIR}/src/glew.c
+)
+
 # Source groups
 source_group("Header Files" FILES ${HEADERS})
 source_group("Source Files" FILES ${SOURCES})
+
+include_directories(
+    ${GLEW_DIR}/include
+)
 
 set( DEPENDENCIES )
 

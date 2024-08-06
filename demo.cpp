@@ -6,11 +6,11 @@ using namespace std;
 
 
 int main(int argc, char **argv) {
-    TENSOR::Tensor<float, 4> a(2, 2, 4, 2);
-    a.print();
+    // TENSOR::Tensor<float, 4> a(2, 2, 4, 2);
+    // a.print();
 
-    // TENSOR::Matrix<float, 2, 2> b(1, 2, 3, 4);
-    // b.print();
+    TENSOR::Matrix<float, 2, 2> b(0, 1, 2, 3);
+    b.print();
 
     // TENSOR::Vector<float, 3> c(1, 2, 3);
     // c.print();
