@@ -21,6 +21,17 @@ struct Tensor {
 
     // to print tensor data
     void print() const;
+    
+    Tp_& operator[](const int idx) { return data[idx]; }
+
+    template <class R, class = std::enable_if_t<std::is_arithmetic_v<R>>>
+    Tensor<Tp_, dimension> operator*(const R scale) const {
+        Tensor<Tp_, dimension> ans;
+        for (int i = 0; i < size; i++) {
+            ans.data[i] = data[i] * scale;
+        }
+        return ans;
+    }
 };
 
 // Tensor implementation
@@ -106,20 +117,79 @@ struct Matrix : public Tensor<Tp_, 2> {
         : Tensor<Tp_, 2>(xsize, ysize) {
         this->data = {static_cast<Tp_>(std::forward<Args>(args))...};
     }
-};
+    // * Override operator
+    // Overloaded assignment operator
+    template<class Tp_r, int xisze_r, int ysize_r>
+    Matrix<Tp_r, xisze_r, ysize_r>& operator=(const Matrix<Tp_r, xisze_r, ysize_r>& right) {
+        // Check for self-assignment
+        if (this == &right) {
+            return *this;
+        }
+        this->data = right.data;
+        return *this;
+    }
+    // Overloaded multiplication operator Matrix * scale
+    template <class R, class = std::enable_if_t<std::is_arithmetic_v<R>>>
+    Matrix<Tp_, xsize, ysize> operator*(const R scale) const {
+        Matrix<Tp_, xsize, ysize> ans;
+        for (int i = 0; i < xsize * ysize; i++) {
+            ans.data[i] = this->data[i] * scale;
+        }
+        return ans;
+    }
+    // Overloaded multiplication operator Matrix / scale
+    template <class R, class = std::enable_if_t<std::is_arithmetic_v<R>>>
+    Matrix<Tp_, xsize, ysize> operator/(const R scale) const {
+        Matrix<Tp_, xsize, ysize> ans;
+        for (int i = 0; i < xsize / ysize; i++) {
+            ans.data[i] = this->data[i] / scale;
+        }
+        return ans;
+    }
+    // Overloaded addition operator Matrix + Matrix
+    Matrix<Tp_, xsize, ysize> operator+(const Matrix<Tp_, xsize, ysize>& right) const {
+        Matrix<Tp_, xsize, ysize> ans;
+        for (int i = 0; i < xsize * ysize; i++) {
+            ans.data[i] = this->data[i] + right.data[i];
+        }
+        return ans;
+    }
+    // * compound operator
+    // Compound assignment operator Matrix += Matrix
+    Matrix<Tp_, xsize, ysize>& operator+=(const Matrix<Tp_, xsize, ysize>& right) {
+        for (int i = 0; i < xsize * ysize; i++) {
+            this->data[i] += right.data[i];
+        }
+        return *this;
+    }
 
-// Vector definition and implementation
-template <class Tp_, int size>
-struct Vector : public Tensor<Tp_, 1> {
-    // Default constructor
-    Vector() : Tensor<Tp_, 1>(size) {}
-
-    // Constructor with elements
-    template <class... Args>
-    Vector(Args&&... args)
-        : Tensor<Tp_, 1>(size) {
-        this->data = {static_cast<Tp_>(std::forward<Args>(args))...};
+    // Compound assignment operator Matrix += scalar
+    template <class R, class = std::enable_if_t<std::is_arithmetic_v<R>>>
+    Matrix<Tp_, xsize, ysize>& operator+=(const R scalar) {
+        for (int i = 0; i < xsize * ysize; i++) {
+            this->data[i] += scalar;
+        }
+        return *this;
     }
 };
+// Overloaded multiplication operator for scalar * Matrix
+template <class R, class Tp_, int xsize, int ysize>
+Matrix<Tp_, xsize, ysize> operator*(const R scale, const Matrix<Tp_, xsize, ysize>& mat) {
+    return mat * scale;
+}
+
+// // Vector definition and implementation
+// template <class Tp_, int size>
+// struct Vector : public Tensor<Tp_, 1> {
+//     // Default constructor
+//     Vector() : Tensor<Tp_, 1>(size) {}
+
+//     // Constructor with elements
+//     template <class... Args>
+//     Vector(Args&&... args)
+//         : Tensor<Tp_, 1>(size) {
+//         this->data = {static_cast<Tp_>(std::forward<Args>(args))...};
+//     }    
+// };
 
 } // namespace TENSOR

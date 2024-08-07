@@ -1,6 +1,5 @@
 #pragma once
 
-#include <thread>
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -14,9 +13,11 @@
 using Vertex    = TENSOR::Matrix<float, 1, 3>;
 using Triangle  = TENSOR::Matrix<int  , 1, 3>;
 
-using Point3D   = TENSOR::Matrix<float, 1, 3>;
+using Color     = TENSOR::Matrix<double, 1, 3>;
+
+using Vec3D     = TENSOR::Matrix<float, 1, 3>;
 using Norm3D    = TENSOR::Matrix<float, 1, 3>;
-using Color     = TENSOR::Vector<float, 3>;
+using Point3D   = TENSOR::Matrix<float, 1, 3>;
 
 namespace ALCHEMY {
 
@@ -82,6 +83,12 @@ struct Camera {
     // Update view matrix, call after changing any view parameter
     void update_view();
     void update_proj();
+    // Reset view matrix
+    void reset_view();
+    void reset_proj();
+    // * Camera matrices
+    TENSOR::Matrix<float, 4, 4> view; 
+    TENSOR::Matrix<float, 4, 4> proj;
 
     // * Handlers
     void rotate_with_mouse(float xoffset, float yoffset);
@@ -91,26 +98,25 @@ struct Camera {
 
     // Camera mouse control options
     float pan_speed = .0015f, rotate_speed = .008f, scroll_factor = 1.1f;
+
+    // * Projection parameters
+    bool ortho = false;
+    float FOV, aspect;
+    float NCP, FCP;
+
+    // * View parameters
+
+    Norm3D center_of_rot;
+    Norm3D world_up, camera_up;
+    
+    float dist_to_center;
     // Euler angles, for mouse control
     float yaw, pitch, roll;
 
-    // Reset the view
-    void reset_view();
-
-    bool ortho = false;
-    // Field Of View
-    float FOV, aspect;
-    // Near Clip Plane, Far Clip Plane
-    float NCP, FCP;
-
-    float dist_to_center;
-
-    Norm3D world_up, camera_up;
-
-    Point3D pos;
+    Vec3D pos, right;
 };
 
-enum class Key_Action {
+enum class Action {
     release, press, repeat
 };
 
@@ -126,7 +132,7 @@ struct Canvas {
     std::string title = "untitled";
 
     // Background color
-    Color background;
+    Color background = Color(0.0f, 0.0f, 0.0f);
     // * Render params
     // Axes? (a)
     bool draw_axes = true;
@@ -139,7 +145,7 @@ struct Canvas {
     // false: loops continuously (glfwPollEvents), useful for e.g. animation
     bool loop_wait_events = true;
 
-    // * Events
+    // * Events callbacks
     // Called after GL cnotext init
     std::function<void()> on_open;
     // Called when window is about to close
@@ -148,8 +154,10 @@ struct Canvas {
     // return true if mesh/point cloud/camera data has been updated, false
     // otherwise
     std::function<bool()> on_loop;
-    
-    std::function<bool(int, Key_Action, int)> on_mouse_button;
+
+
+    std::function<bool(int, Action, int)> on_key;
+    std::function<bool(int, Action, int)> on_mouse_button;
     // Called on mouse move: args(x, y) return false to prevent default
     std::function<bool(double, double)> on_mouse_move;
     // Called on mouse scroll: args(xoffset, yoffset) return false to prevent default
@@ -158,7 +166,7 @@ struct Canvas {
     // * other
     int     _width = 800, _height = 600;
     double  _mouse_x, _mouse_y;
-    int     _mouse_button = -1;
+    int     _mouse_button = -1, _mouse_mods;
 
     // ADNANCED: Pointer to GLFW window object
     void* _window = nullptr;
