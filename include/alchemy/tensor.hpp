@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream>
 
+using uint = unsigned int;
+
 namespace TENSOR {
 
 template <class Tp_, int dimension>
@@ -64,14 +66,18 @@ Tensor<Tp_, dimension>::Tensor(int d0, Args&&... args)
 template <class Tp_, int dimension>
 void Tensor<Tp_, dimension>::print() const {
     auto paint = [&](int x, std::string text) -> void {std::cout << "\033[1;" << std::to_string(x + 31) + "m" + text + "\033[0m";};
-    std::cout << "dimension : " << dim.size() << "\n";
-    std::cout << "index : ";
-    for (int i = 0; i < dim.size(); i++) {
-        paint(i, "[");
-        std:: cout << dim.size() - i;
-        paint(i, "] ");
+    
+    if (dim.size() > 3) {
+        std::cout << "dimension : " << dim.size() << "\n";
+        std::cout << "index : ";
+        for (int i = 0; i < dim.size(); i++) {
+            paint(i, "[");
+            std:: cout << dim.size() - i;
+            paint(i, "] ");
+        }
+        std::cout << "\n";
     }
-    std::cout << "\n";
+
     if (dim.size() == 0) {
         std::cout << "Emtpy Tensor\n";
         return ;
@@ -114,9 +120,8 @@ void Tensor<Tp_, dimension>::print() const {
         }
         // std::cout << "\033[0m";
     };
-    std::cout << "\n";
     print_recursive(print_recursive, 0, 0, size);
-    std::cout << "\n\n";
+    std::cout << "\n";
 }
 
 // Matrix definition and implementation
@@ -158,6 +163,15 @@ struct Matrix : public Tensor<Tp_, 2> {
         Matrix<Tp_, xsize, ysize> ans;
         for (int i = 0; i < xsize * ysize; i++) {
             ans.data[i] = this->data[i] / scale;
+        }
+        return ans;
+    }
+    // Overloaded multiplication operator Matrix + scale
+    template <class R, class = std::enable_if_t<std::is_arithmetic_v<R>>>
+    Matrix<Tp_, xsize, ysize> operator+(const R scale) const {
+        Matrix<Tp_, xsize, ysize> ans;
+        for (int i = 0; i < xsize * ysize; i++) {
+            ans.data[i] = this->data[i] + scale;
         }
         return ans;
     }

@@ -5,21 +5,21 @@
 #include <sstream>
 #include <iostream>
 #include <functional>
+#include <algorithm>
 
 #include <GLFW/glfw3.h>
 
 #include "alchemy/common.hpp"
 #include "alchemy/tensor.hpp"
-#include "alchemy/algorithm.hpp"
 
-#define Color      TENSOR::Matrix<double, 1, 3>
+#define Color       TENSOR::Matrix<double, 1, 3>
 
-#define Vec3D      TENSOR::Matrix<float, 1, 3>
-#define Norm3D     TENSOR::Matrix<float, 1, 3>
-#define Point3D    TENSOR::Matrix<float, 1, 3>
-#define Triangle   TENSOR::Matrix<Point3D, 1, 3>
+#define Vec3D       TENSOR::Matrix<float, 1, 3>
+#define Norm3D      TENSOR::Matrix<float, 1, 3>
+#define Point3D     TENSOR::Matrix<float, 1, 3>
+#define Triangle    TENSOR::Matrix<Point3D, 1, 3>
 
-#define Vertex     Point3D
+#define Vertex      Point3D
 
 #define Index       TENSOR::Matrix<int, 1, 3>
 
@@ -28,9 +28,6 @@ namespace ALCHEMY {
 struct Face {
     Index v;
     uint MortonCode;
-    void get_MortonCode() {
-
-    }
 };
 
 // only faces and vertices
@@ -38,7 +35,7 @@ struct Object {
     std::vector<Vertex> vertices;
     std::vector<Face>   faces;
 
-    Point3D limit_min, limit_max;
+    Point3D limit;
 
     Object() = default;
     Object(const std::string& path) {
@@ -80,18 +77,53 @@ struct Object {
             }
         }
         std::cout << "Successfully read in: " << path << "\n"; 
-        std::cout << "VERTEX [" << vertices.size() << "]  | FACE [" << faces.size() << "]\n ";
+        std::cout << "VERTEX [" << vertices.size() << "]  | FACE [" << faces.size() << "]\n";
     }
 
     // sort faces by MortonCode
     void get_limit();
     void sort_faces();
     void get_MortonCode();
+    Triangle get_triangle(int idx) {
+        return Triangle(vertices[faces[idx].v[0] - 1], vertices[faces[idx].v[1] - 1], vertices[faces[idx].v[2] - 1]);
+    }
+    Triangle get_triangle(Face f) {
+        return Triangle(vertices[f.v[0] - 1], vertices[f.v[1] - 1], vertices[f.v[2] - 1]);
+    }
 };
 
+Point3D centroid(Triangle tri) {
+    return (tri[0] + tri[1] + tri[2]) / 3;
+}
 
-Point3D centroid_of_Face(Object obj, Face face) {
-    return (obj.vertices[face.v[0]] + obj.vertices[face.v[1]] + obj.vertices[face.v[2]]) / 3;
+// Expands a 10-bit interger into 30 bits.
+uint expandBits(uint v) {
+    v = (v * 0x00010001u) & 0xFF0000FFu;
+    v = (v * 0x00000101u) & 0x0F00F00Fu;
+    v = (v * 0x00000011u) & 0xC30C30C3u;
+    v = (v * 0x00000005u) & 0x49249249u;
+    return v;
+}
+
+// Calculates a 30-bit Morton code for the
+// given 3D point located within the unit cube [0,1].
+// Morton encoding function using std::clamp
+template<typename R>
+uint morton3D(R x, R y, R z) {
+    uint x_exp = expandBits(clamp(static_cast<int>(x * 1024), 0, 1023));
+    uint y_exp = expandBits(clamp(static_cast<int>(y * 1024), 0, 1023));
+    uint z_exp = expandBits(clamp(static_cast<int>(z * 1024), 0, 1023));
+    return (x_exp << 2) | (y_exp << 1) | z_exp;
+}
+
+// Calculates a 30-bit Morton code for the
+// given 3D point located within the unit cube [0,1].
+// Morton encoding function using std::clamp
+uint morton3D(Point3D p) {
+    uint x_exp = expandBits(std::clamp(static_cast<int>(p[0] * 1024), 0, 1023));
+    uint y_exp = expandBits(std::clamp(static_cast<int>(p[1] * 1024), 0, 1023));
+    uint z_exp = expandBits(std::clamp(static_cast<int>(p[2] * 1024), 0, 1023));
+    return (x_exp << 2) | (y_exp << 1) | z_exp;
 }
 
 struct Light {
