@@ -8,23 +8,37 @@
 
 #include <GLFW/glfw3.h>
 
+#include "alchemy/common.hpp"
 #include "alchemy/tensor.hpp"
+#include "alchemy/algorithm.hpp"
 
-using Vertex    = TENSOR::Matrix<float, 1, 3>;
-using Triangle  = TENSOR::Matrix<int  , 1, 3>;
+#define Color      TENSOR::Matrix<double, 1, 3>
 
-using Color     = TENSOR::Matrix<double, 1, 3>;
+#define Vec3D      TENSOR::Matrix<float, 1, 3>
+#define Norm3D     TENSOR::Matrix<float, 1, 3>
+#define Point3D    TENSOR::Matrix<float, 1, 3>
+#define Triangle   TENSOR::Matrix<Point3D, 1, 3>
 
-using Vec3D     = TENSOR::Matrix<float, 1, 3>;
-using Norm3D    = TENSOR::Matrix<float, 1, 3>;
-using Point3D   = TENSOR::Matrix<float, 1, 3>;
+#define Vertex     Point3D
+
+#define Index       TENSOR::Matrix<int, 1, 3>
 
 namespace ALCHEMY {
 
-// only face and vertex
+struct Face {
+    Index v;
+    uint MortonCode;
+    void get_MortonCode() {
+
+    }
+};
+
+// only faces and vertices
 struct Object {
-    std::vector<Vertex>     vertex;
-    std::vector<Triangle>   face;
+    std::vector<Vertex> vertices;
+    std::vector<Face>   faces;
+
+    Point3D limit_min, limit_max;
 
     Object() = default;
     Object(const std::string& path) {
@@ -48,13 +62,15 @@ struct Object {
                 case 'v': {
                     float x, y, z;
                     input_line >> x >> y >> z;
-                    vertex.push_back(Vertex(x, y, z));
+                    vertices.push_back(Vertex(x, y, z));
                     break;
                 }
                 case 'f': {
                     int a, b, c;
                     input_line >> a >> b >> c;
-                    face.push_back(Triangle(a, b, c));
+                    Face tmp;
+                    tmp.v = Index(a, b, c);
+                    faces.push_back(tmp);
                     break;
                 }
                 default: {
@@ -64,13 +80,19 @@ struct Object {
             }
         }
         std::cout << "Successfully read in: " << path << "\n"; 
-        std::cout << "VERTEX [" << vertex.size() << "]  | FACE [" << face.size() << "]\n ";
+        std::cout << "VERTEX [" << vertices.size() << "]  | FACE [" << faces.size() << "]\n ";
     }
 
-    void debug() {
-
-    }
+    // sort faces by MortonCode
+    void get_limit();
+    void sort_faces();
+    void get_MortonCode();
 };
+
+
+Point3D centroid_of_Face(Object obj, Face face) {
+    return (obj.vertices[face.v[0]] + obj.vertices[face.v[1]] + obj.vertices[face.v[2]]) / 3;
+}
 
 struct Light {
 

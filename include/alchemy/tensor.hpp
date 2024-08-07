@@ -17,7 +17,7 @@ struct Tensor {
 
     // Tensor(dim0, dim1, dim2 ...)
     template <class... Args>
-    Tensor(Args&&... args);
+    Tensor(int d0, Args&&... args);
 
     // to print tensor data
     void print() const;
@@ -32,6 +32,20 @@ struct Tensor {
         }
         return ans;
     }
+
+    template <class Tp_r, int dimension_r>
+    Tensor<Tp_, dimension>& operator=(const Tensor<Tp_r, dimension_r>& right) {
+        if (dimension != dimension_r) {
+            throw std::runtime_error("Dimension mismatch");
+        }
+        if (typeid(Tp_) != typeid(Tp_r)) {
+            throw std::runtime_error("Type mismatch");
+        }
+        size = right.size;
+        data = right.data;
+        dim = right.dim;
+        return *this;
+    }
 };
 
 // Tensor implementation
@@ -40,8 +54,8 @@ Tensor<Tp_, dimension>::Tensor() : dim(dimension, 1), data(1) {}
 
 template <class Tp_, int dimension>
 template <class... Args>
-Tensor<Tp_, dimension>::Tensor(Args&&... args)
-    : dim{static_cast<int>(std::forward<Args>(args))...}, data() {
+Tensor<Tp_, dimension>::Tensor(int d0, Args&&... args)
+    : dim{d0, static_cast<int>(std::forward<Args>(args))...}, data() {
     size = 1;
     for (auto& d : dim) size *= d;
     data.resize(size);
@@ -113,10 +127,11 @@ struct Matrix : public Tensor<Tp_, 2> {
 
     // Constructor with elements
     template <class... Args>
-    Matrix(Args&&... args)
+    Matrix(Tp_ first_element, Args&&... args)
         : Tensor<Tp_, 2>(xsize, ysize) {
-        this->data = {static_cast<Tp_>(std::forward<Args>(args))...};
+        this->data = {first_element, static_cast<Tp_>(std::forward<Args>(args))...};
     }
+    
     // * Override operator
     // Overloaded assignment operator
     template<class Tp_r, int xisze_r, int ysize_r>
@@ -141,7 +156,7 @@ struct Matrix : public Tensor<Tp_, 2> {
     template <class R, class = std::enable_if_t<std::is_arithmetic_v<R>>>
     Matrix<Tp_, xsize, ysize> operator/(const R scale) const {
         Matrix<Tp_, xsize, ysize> ans;
-        for (int i = 0; i < xsize / ysize; i++) {
+        for (int i = 0; i < xsize * ysize; i++) {
             ans.data[i] = this->data[i] / scale;
         }
         return ans;
