@@ -62,7 +62,7 @@ endif()
 add_definitions(-DGLEW_STATIC)
 
 # Gather sources and headers
-file(GLOB SOURCES ${SRC_DIR}/*.cpp)
+file(GLOB_RECURSE SOURCES ${SRC_DIR}/*.cpp)
 file(GLOB PUBLIC_HEADERS ${INCLUDE_DIR}/alchemy/*.hpp)
 file(GLOB PRIVATE_HEADERS ${INCLUDE_DIR}/alchemy/internal/*.hpp)
 

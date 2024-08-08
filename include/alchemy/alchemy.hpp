@@ -6,125 +6,58 @@
 #include <iostream>
 #include <functional>
 #include <algorithm>
+#include <memory>
 
 #include <GLFW/glfw3.h>
 
 #include "alchemy/common.hpp"
 #include "alchemy/tensor.hpp"
 
-#define Color       TENSOR::Matrix<double, 1, 3>
+using Color     = TENSOR::Matrix<double, 1, 3>;
 
-#define Vec3D       TENSOR::Matrix<float, 1, 3>
-#define Norm3D      TENSOR::Matrix<float, 1, 3>
-#define Point3D     TENSOR::Matrix<float, 1, 3>
-#define Triangle    TENSOR::Matrix<Point3D, 1, 3>
+using Vec3D     = TENSOR::Matrix<float, 1, 3>;
+using Norm3D    = TENSOR::Matrix<float, 1, 3>;
+using Point3D   = TENSOR::Matrix<float, 1, 3>;
+using Triangle  = TENSOR::Matrix<Point3D, 1, 3>;
 
-#define Vertex      Point3D
+using Vertex    = Point3D;
+using Face      = TENSOR::Matrix<int, 1, 3>;
 
-#define Index       TENSOR::Matrix<int, 1, 3>
+using AABB      = TENSOR::Matrix<Point3D, 1, 2>;
 
-namespace ALCHEMY {
+namespace ALCHEMY { 
 
-struct Face {
-    Index v;
-    uint MortonCode;
+struct Node {
+    int l, r;
+    int parent;
+    bool isLeaf() { return l == 0 && r == 0; }
 };
 
 // only faces and vertices
 struct Object {
+    // * Basics
     std::vector<Vertex> vertices;
     std::vector<Face>   faces;
 
-    Point3D limit;
-
     Object() = default;
-    Object(const std::string& path) {
-        std::ifstream file(path);
-        if (!file.is_open()) {
-            std::cerr << "Failed to open file: " << path << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        std::string line;
-        while (std::getline(file, line)) {
-            // cout << line << endl;
-            if (line.empty() || line[0] == '#') {
-                continue;
-            }
+    Object(const std::string& path);
+    Triangle get_triangle(int idx);
+    Triangle get_triangle(Face& f);
 
-            std::istringstream input_line(line);
-            char type;
-            input_line >> type;
+    // * Linear BVH
+    Point3D limit;                  // to resize Points into [0,1].
+    std::vector<uint> mortonCode;   // mortonCode align with faces.
+    std::vector<AABB> Sorted_AABB;  // AABBs for all nodes.
+    std::vector<int>  Sorted_Id;    // sorted index.
+    // ? use vector for simplification only
 
-            switch (type) {
-                case 'v': {
-                    float x, y, z;
-                    input_line >> x >> y >> z;
-                    vertices.push_back(Vertex(x, y, z));
-                    break;
-                }
-                case 'f': {
-                    int a, b, c;
-                    input_line >> a >> b >> c;
-                    Face tmp;
-                    tmp.v = Index(a, b, c);
-                    faces.push_back(tmp);
-                    break;
-                }
-                default: {
-                    // std::cerr << "Unknown line type: " << type << std::endl;
-                    break;
-                }
-            }
-        }
-        std::cout << "Successfully read in: " << path << "\n"; 
-        std::cout << "VERTEX [" << vertices.size() << "]  | FACE [" << faces.size() << "]\n";
-    }
+    void init_BVH();
 
-    // sort faces by MortonCode
     void get_limit();
+    void get_mortonCode();
+    // sort faces by MortonCode
     void sort_faces();
-    void get_MortonCode();
-    Triangle get_triangle(int idx) {
-        return Triangle(vertices[faces[idx].v[0] - 1], vertices[faces[idx].v[1] - 1], vertices[faces[idx].v[2] - 1]);
-    }
-    Triangle get_triangle(Face f) {
-        return Triangle(vertices[f.v[0] - 1], vertices[f.v[1] - 1], vertices[f.v[2] - 1]);
-    }
 };
-
-Point3D centroid(Triangle tri) {
-    return (tri[0] + tri[1] + tri[2]) / 3;
-}
-
-// Expands a 10-bit interger into 30 bits.
-uint expandBits(uint v) {
-    v = (v * 0x00010001u) & 0xFF0000FFu;
-    v = (v * 0x00000101u) & 0x0F00F00Fu;
-    v = (v * 0x00000011u) & 0xC30C30C3u;
-    v = (v * 0x00000005u) & 0x49249249u;
-    return v;
-}
-
-// Calculates a 30-bit Morton code for the
-// given 3D point located within the unit cube [0,1].
-// Morton encoding function using std::clamp
-template<typename R>
-uint morton3D(R x, R y, R z) {
-    uint x_exp = expandBits(clamp(static_cast<int>(x * 1024), 0, 1023));
-    uint y_exp = expandBits(clamp(static_cast<int>(y * 1024), 0, 1023));
-    uint z_exp = expandBits(clamp(static_cast<int>(z * 1024), 0, 1023));
-    return (x_exp << 2) | (y_exp << 1) | z_exp;
-}
-
-// Calculates a 30-bit Morton code for the
-// given 3D point located within the unit cube [0,1].
-// Morton encoding function using std::clamp
-uint morton3D(Point3D p) {
-    uint x_exp = expandBits(std::clamp(static_cast<int>(p[0] * 1024), 0, 1023));
-    uint y_exp = expandBits(std::clamp(static_cast<int>(p[1] * 1024), 0, 1023));
-    uint z_exp = expandBits(std::clamp(static_cast<int>(p[2] * 1024), 0, 1023));
-    return (x_exp << 2) | (y_exp << 1) | z_exp;
-}
 
 struct Light {
 
