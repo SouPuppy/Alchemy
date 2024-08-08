@@ -65,7 +65,7 @@ Tensor<Tp_, dimension>::Tensor(int d0, Args&&... args)
 
 template <class Tp_, int dimension>
 void Tensor<Tp_, dimension>::print() const {
-    auto paint = [&](int x, std::string text) -> void {std::cout << "\033[1;" << std::to_string(x + 31) + "m" + text + "\033[0m";};
+    auto paint  = [&](int x, std::string text) -> void { std::cout << "\033[1;" << std::to_string(x + 31) + "m" + text + "\033[0m"; };
     
     if (dim.size() > 3) {
         std::cout << "dimension : " << dim.size() << "\n";
@@ -85,7 +85,7 @@ void Tensor<Tp_, dimension>::print() const {
     if (dim.size() == 1) {
         paint(0, "[");
         for (int i = 0; i < dim[0]; i++) {
-            std::cout << data[0] << (i < dim[0] - 1 ? ", " : "");
+            std::cout << "\0 "[data[i] > 0] << data[i] << (i < dim[0] - 1 ? ", " : "");
         }
         paint(0, "]");
         return ;
@@ -102,7 +102,7 @@ void Tensor<Tp_, dimension>::print() const {
             for (int i = 0; i < row; i++, std::cout << "\n\0"[i == row]) {
                 if (i != 0) paint(level + 1, tabs(level + 1) + "[");
                 for (int j = 0; j < col; j++) {
-                    std::cout << data[idx + col * i + j] << (j != col - 1 ? ", " : "");
+                    std::cout << "\0 "[data[idx + col * i + j] > 0] << data[idx + col * i + j] << (j != col - 1 ? ", " : "");
                 }
                 paint(level + 1, "]");
             }

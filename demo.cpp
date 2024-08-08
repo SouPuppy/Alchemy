@@ -10,14 +10,9 @@ using namespace TENSOR;
 
 int main(int argc, char **argv) {
     Object obj("C:/Users/soupup/Desktop/Alchemy/sources/cube.obj");
-    
-    obj.init_BVH();
-    obj.sort_faces();
-    
-    // centroid(obj.get_triangle(0)).print();
-    // Matrix<float, 2, 2> a(1, 2, 3, 4);
-    // a.print();
-    // a = a + 1;
-    // a.print();
+
+    obj.build_LinearBVH();
+    // obj.build_octTree();
+    obj.debug();
     return 0;
 }

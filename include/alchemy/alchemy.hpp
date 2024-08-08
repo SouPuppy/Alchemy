@@ -13,6 +13,8 @@
 #include "alchemy/common.hpp"
 #include "alchemy/tensor.hpp"
 
+#include <bitset>
+
 using Color     = TENSOR::Matrix<double, 1, 3>;
 
 using Vec3D     = TENSOR::Matrix<float, 1, 3>;
@@ -45,18 +47,37 @@ struct Object {
     Triangle get_triangle(Face& f);
 
     // * Linear BVH
-    Point3D limit;                  // to resize Points into [0,1].
-    std::vector<uint> mortonCode;   // mortonCode align with faces.
-    std::vector<AABB> Sorted_AABB;  // AABBs for all nodes.
-    std::vector<int>  Sorted_Id;    // sorted index.
-    // ? use vector for simplification only
+    // ! using vector is oversimplification
+    Point3D limit;  // to resize Points into [0,1].
+    std::vector<int>  Sort_idx; // sorted index.
+    std::vector<uint> mortonCode;    // Sorted_mortonCode align with faces.
 
-    void init_BVH();
+    // * == [0,N-2] node == [N-1,2N-1] leaf ==
+    std::vector<uint> Sorted_mortonCode;    // Sorted_mortonCode align with faces.
+    std::vector<AABB> Sorted_AABBs;         // AABBs for all nodes.
+    std::vector<Node> node;                 // nodes in BVH
+    // ! No CUDA Hack
+    std::vector<bool> visit;
+    #define id(x)  Sort_idx[x]
+
+
+    void build_LinearBVH();
 
     void get_limit();
-    void get_mortonCode();
     // sort faces by MortonCode
-    void sort_faces();
+    void debug() {
+        int N = faces.size();
+        for (int i = 0; i < node.size(); i++) {
+            // std:: cout << std::bitset<30>(Sorted_mortonCode[i]) << "\n";
+            std::cout << "Node [" << i << "]\n";
+            // Sorted_AABBs[i][0].print();
+            // Sorted_AABBs[i][1].print();
+            std::cout
+            << "L: " << node[i].l << "\n"
+            << "R: " << node[i].r << "\n"
+            << "F: " << node[i].parent << "\n\n";
+        }
+    }
 };
 
 struct Light {
