@@ -7,16 +7,24 @@ Point3D centroid(Triangle tri) {
 
 namespace ALCHEMY {
 
+uint commonPrefix(uint m1, uint m2) {
+    uint diff = m1 ^ m2;
+    int prefixLength = __builtin_clz(diff);
+    uint mask = ~((1U << (32 - prefixLength)) - 1);
+    return m1 & mask;
+}
+
 void Object::build_LinearBVH() {
     int N = faces.size();
-    mortonCode          .   resize(N);
-    Sorted_mortonCode   .   resize(N);
     Sort_idx            .   resize(N);
+    mortonCode          .   resize(N);
+    AABBs               .   resize(N);
 
+    Sorted_mortonCode   .   resize(N * 2 - 1);
     Sorted_AABBs        .   resize(N * 2 - 1);
     node                .   resize(N * 2 - 1);
     visit               .   resize(N * 2 - 1);
-    
+
     for (int i = 0; i < N; i++)     Sort_idx[i] = i;
     // * Get mortonCode
     get_limit();
@@ -32,10 +40,11 @@ void Object::build_LinearBVH() {
     // Sort
     std::sort(Sort_idx.begin(), Sort_idx.end(), [&](int a, int b) { return mortonCode[a] < mortonCode[b]; });
     // Get Sorted mortonCode
+    // TODO shold do in parrallel
     for (int i = 0; i < N; i++) {
-        Sorted_mortonCode[i] = mortonCode[id(i)];
+        Sorted_mortonCode[i + N - 1] = mortonCode[id(i)];
     }
-
+    
     // * Calculate leaf node's AABBs
     auto triangle_AABB = [&](Triangle tri) -> AABB {
         AABB result = AABB(tri[0], tri[0]);
@@ -49,7 +58,7 @@ void Object::build_LinearBVH() {
     };
 
     for (int i = 0; i < N; i++) {
-        Sorted_AABBs[Sort_idx[i]] = triangle_AABB(get_triangle(Sort_idx[i]));
+        AABBs[i] = triangle_AABB(get_triangle(i));
     }
 
     // * build Binary Radix Tree
@@ -59,17 +68,23 @@ void Object::build_LinearBVH() {
 
     auto delta = [&](int _i, int _j) -> int {
         if (_j < 0 || _j >= N) return -1;
-        int del = 0;
-        int common = Sorted_mortonCode[_i] ^ Sorted_mortonCode[_j];
-        while (common) common >>= 1, del++;
-        return 30 - del;
+        return __builtin_clz(mortonCode[_i] ^ mortonCode[_j]);
+    };
+
+    auto merge_AABB = [&](AABB a, AABB b) -> AABB {
+        AABB result = a;
+        for (int i = 0; i < 3; i++) {
+            result[0][i] = std::min({result[0][i], b[0][i], b[1][i]});
+            result[1][i] = std::max({result[1][i], b[0][i], b[1][i]});
+        }
+        return result;
     };
 
     auto build_BRTree_node = [&](int i) -> void {
         if (i >= N) return;
-        Sorted_AABBs[i + N - 1] = Sorted_AABBs[i];
+        Sorted_AABBs[i + N - 1] = AABBs[id(i)];
         if (i >= N - 1) return ;
-
+        
         // (STEP 1.)  determine direction
         int d = delta(i, i + 1) - delta(i, i - 1) > 0 ? 1 : -1;
 
@@ -102,46 +117,65 @@ void Object::build_LinearBVH() {
         
         node[l_idx].parent = i;
         node[r_idx].parent = i;
-    };
 
-    auto merge_AABB = [&](AABB a, AABB b) -> AABB {
-        AABB result = a;
-        for (int i = 0; i < 3; i++) {
-            result[0][i] = std::min({result[0][i], b[0][i], b[1][i]});
-            result[1][i] = std::max({result[1][i], b[0][i], b[1][i]});
-        }
-        return result;
-    };
-
-    // update AABB from a leaf node
-    auto update_AABB = [&](int i) -> void {
-        if (i >= N) return;
         int idx = node[i + N - 1].parent;
         while (idx != 0) {
             // ! if both l & r were constructed 
             if (visit[idx] == false) { visit[idx] = true; return ; }
-            std::cout << idx << std::endl;
-
+            std:: cout << "N " << idx << "\n";
             const int l_idx = node[idx].l;
             const int r_idx = node[idx].r;
             const AABB l_aabb = Sorted_AABBs[l_idx];
             const AABB r_aabb = Sorted_AABBs[r_idx];
-            Sorted_AABBs[idx] = merge_AABB(l_aabb, r_aabb);
+            // Sorted_AABBs[idx] = merge_AABB(l_aabb, r_aabb);
+            // Sorted_mortonCode[idx] = commonPrefix(Sorted_mortonCode[l_idx], Sorted_mortonCode[r_idx]);
             idx = node[idx].parent;
         }
     };
 
     // Todo: where this should be using CUDA and proccess in parallel
-    // * (Part 1.) constructing node
-    for (int i = 0; i < N - 1; i++) {
+    // * Constructing node
+    for (int i = 0; i < N; i++) {
         build_BRTree_node(i);
     }
 
-    // * (Part 2.) update AABBs for all node
-    for (int i = 0; i < N; i++) {
-        update_AABB(i);
-    }
+    std::cout << "Done\n";
+}
 
+std::vector<int> mortonCode2OCTreeindex(uint m) {
+    std::vector<int> idx;
+    while (m > 0) {
+        int index = m & 0x7;
+        idx.push_back(index);
+        m >>= 3;
+    }
+    std::reverse(idx.begin(), idx.end());
+    return idx;
+}
+
+void Object::build_OCTree_with_BVH() {
+    int N = faces.size();
+
+    auto build_OCTree_node = [&](int i) -> void {
+        std::vector<int> OCTree_idx;
+        if (node[i].isLeaf()) {
+            // ? If leaf
+            OCTree_idx = mortonCode2OCTreeindex(Sorted_mortonCode[i]);
+            octree.add(OCTree_idx, Sorted_AABBs[i]);
+        }
+        else {
+            // ? If node
+            int l_idx = node[i].l;
+            int r_idx = node[i].r;
+            // OCTree_idx = mortonCode2OCTreeindex(commonPrefix(Sorted_mortonCode[l_idx], Sorted_mortonCode[r_idx]));
+            OCTree_idx = mortonCode2OCTreeindex(Sorted_mortonCode[i]);
+            octree.add(OCTree_idx, Sorted_AABBs[i]);
+        }
+    };
+
+    for (int i = 0; i < 2 * N - 1; i++) {
+        build_OCTree_node(i);
+    }
 }
 
 void Object::get_limit() {

@@ -35,7 +35,29 @@ struct Node {
     bool isLeaf() { return l == 0 && r == 0; }
 };
 
-// only faces and vertices
+struct OctNode {
+    OctNode* son[8];
+    AABB aabb;
+    OctNode() { for (int i = 0; i < 8; i++) son[i] = nullptr; }
+};
+
+struct OCTree {
+    OctNode* root;
+    OCTree() { root = new OctNode(); }
+    void add(const std::vector<int>& idx, const AABB& aabb) {
+        OctNode* p = root;
+        for (int i = 0; i < idx.size(); i++) {
+            int index = idx[i];
+            
+            if (p->son[index] == nullptr) {
+                p->son[index] = new OctNode();
+            }
+            p = p->son[index];
+        }
+        p->aabb = aabb;
+    }
+};
+
 struct Object {
     // * Basics
     std::vector<Vertex> vertices;
@@ -46,11 +68,14 @@ struct Object {
     Triangle get_triangle(int idx);
     Triangle get_triangle(Face& f);
 
+    OCTree octree;
+
     // * Linear BVH
     // ! using vector is oversimplification
     Point3D limit;  // to resize Points into [0,1].
     std::vector<int>  Sort_idx; // sorted index.
     std::vector<uint> mortonCode;    // Sorted_mortonCode align with faces.
+    std::vector<AABB> AABBs;    // Sorted_mortonCode align with faces.
 
     // * == [0,N-2] node == [N-1,2N-1] leaf ==
     std::vector<uint> Sorted_mortonCode;    // Sorted_mortonCode align with faces.
@@ -62,17 +87,18 @@ struct Object {
 
 
     void build_LinearBVH();
+    void build_OCTree_with_BVH();
 
     void get_limit();
     // sort faces by MortonCode
     void debug() {
         int N = faces.size();
         for (int i = 0; i < node.size(); i++) {
+            std::cout << "Node [" << i << "] " << " \0"[i > 9];
             // std:: cout << std::bitset<30>(Sorted_mortonCode[i]) << "\n";
-            std::cout << "Node [" << i << "]\n";
             // Sorted_AABBs[i][0].print();
             // Sorted_AABBs[i][1].print();
-            std::cout
+            std::cout << "\n"
             << "L: " << node[i].l << "\n"
             << "R: " << node[i].r << "\n"
             << "F: " << node[i].parent << "\n\n";
