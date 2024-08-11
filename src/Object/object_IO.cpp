@@ -40,8 +40,4 @@ Object::Object(const std::string& path) {
     std::cout << "VERTEX [" << vertices.size() << "]  | FACE [" << faces.size() << "]\n";
 }
 
-Triangle Object::get_triangle(int idx) {
-    return Triangle(vertices[faces[idx][0] - 1], vertices[faces[idx][1] - 1], vertices[faces[idx][2] - 1]);
-}
-
 } // namespace ALCHEMY

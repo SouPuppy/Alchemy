@@ -1,4 +1,4 @@
-only support Clang
+Compile with MSVC
 
 this project contains parts
 

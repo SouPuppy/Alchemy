@@ -7,6 +7,7 @@
 #include <functional>
 #include <algorithm>
 #include <memory>
+#include <string>
 
 #include <GLFW/glfw3.h>
 
@@ -29,33 +30,20 @@ using AABB      = TENSOR::Matrix<Point3D, 1, 2>;
 
 namespace ALCHEMY { 
 
-struct Node {
+struct BVHNode {
     int l, r;
     int parent;
     bool isLeaf() { return l == 0 && r == 0; }
+    void *ref_oct = nullptr;  // Reference to OctNode
 };
 
 struct OctNode {
-    OctNode* son[8];
+    uint key;
+    OctNode *son[8];
     AABB aabb;
-    OctNode() { for (int i = 0; i < 8; i++) son[i] = nullptr; }
-};
+    int l_board, r_borad;
 
-struct OCTree {
-    OctNode* root;
-    OCTree() { root = new OctNode(); }
-    void add(const std::vector<int>& idx, const AABB& aabb) {
-        OctNode* p = root;
-        for (int i = 0; i < idx.size(); i++) {
-            int index = idx[i];
-            
-            if (p->son[index] == nullptr) {
-                p->son[index] = new OctNode();
-            }
-            p = p->son[index];
-        }
-        p->aabb = aabb;
-    }
+    OctNode() { for (int i = 0; i < 8; i++) son[i] = nullptr; }
 };
 
 struct Object {
@@ -65,43 +53,60 @@ struct Object {
 
     Object() = default;
     Object(const std::string& path);
-    Triangle get_triangle(int idx);
     Triangle get_triangle(Face& f);
 
-    OCTree octree;
-
-    // * Linear BVH
-    // ! using vector is oversimplification
-    Point3D limit;  // to resize Points into [0,1].
-    std::vector<int>  Sort_idx; // sorted index.
-    std::vector<uint> mortonCode;    // Sorted_mortonCode align with faces.
-    std::vector<AABB> AABBs;    // Sorted_mortonCode align with faces.
-
-    // * == [0,N-2] node == [N-1,2N-1] leaf ==
-    std::vector<uint> Sorted_mortonCode;    // Sorted_mortonCode align with faces.
-    std::vector<AABB> Sorted_AABBs;         // AABBs for all nodes.
-    std::vector<Node> node;                 // nodes in BVH
-    // ! No CUDA Hack
-    std::vector<bool> visit;
+    // * BVH & OCTree
+    // size N
+    std::vector<int>  Sort_idx;     // sorted index.
+    std::vector<int>  Origin_idx;
     #define id(x)  Sort_idx[x]
+    #define origin(x)  Origin_idx[x]
 
+    std::vector<uint> mortonCode;
+    std::vector<AABB> AABBs;
 
+    // Size N * 2 - 1
+    // [0, N-2] node, [N-1, N*2-1] leaf
+    std::vector<uint> Sorted_mortonCode;    // Sorted_mortonCode
+    std::vector<AABB> Sorted_AABBs;         // AABBs for all nodes.
+
+    // BVHTree structure
+    std::vector<BVHNode> node;              
+    std::vector<bool> visit;
+
+    // OCTree structure
+    OctNode* root;                     
+    // Auxillary
+
+    // * Build Tree
     void build_LinearBVH();
-    void build_OCTree_with_BVH();
+    void build_OCTree_from_BVH();
 
-    void get_limit();
-    // sort faces by MortonCode
+#define BS std::bitset<30>
     void debug() {
         int N = faces.size();
         for (int i = 0; i < node.size(); i++) {
-            std::cout << "Node [" << i << "] " << " \0"[i > 9];
-            // std:: cout << std::bitset<30>(Sorted_mortonCode[i]) << "\n";
-            // Sorted_AABBs[i][0].print();
-            // Sorted_AABBs[i][1].print();
-            std::cout << "\n"
-            << "L: " << node[i].l << "\n"
-            << "R: " << node[i].r << "\n"
-            << "F: " << node[i].parent << "\n\n";
+
+            OctNode *p = (OctNode*)node[i].ref_oct;
+            auto KEY = [&](uint m) -> std::string {
+                if (m == -1) return "/";
+                std::string s = "";
+                int l = 0;
+                while (m) {
+                    s = "01"[m & 1] + s;
+                    m >>= 1;
+                    l ++;
+                }
+                l = (3 - l % 3) % 3;
+                while (l--) s = s + "*";
+                return s;
+            };
+
+            std::cout
+            << "[" << i << "]\n"
+            << "KEY: " << KEY(p->key) << "\n"
+            // << std::bitset<30>(Sorted_mortonCode[i])
+            << "\n";
         }
     }
 };

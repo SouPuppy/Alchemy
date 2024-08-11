@@ -66,7 +66,9 @@ Tensor<Tp_, dimension>::Tensor(int d0, Args&&... args)
 template <class Tp_, int dimension>
 void Tensor<Tp_, dimension>::print() const {
     auto paint  = [&](int x, std::string text) -> void { std::cout << "\033[1;" << std::to_string(x + 31) + "m" + text + "\033[0m"; };
-    
+
+    // auto paint = [&](int x, std::string text) -> void { std::cout << text; };
+
     if (dim.size() > 3) {
         std::cout << "dimension : " << dim.size() << "\n";
         std::cout << "index : ";
@@ -206,19 +208,5 @@ template <class R, class Tp_, int xsize, int ysize>
 Matrix<Tp_, xsize, ysize> operator*(const R scale, const Matrix<Tp_, xsize, ysize>& mat) {
     return mat * scale;
 }
-
-// // Vector definition and implementation
-// template <class Tp_, int size>
-// struct Vector : public Tensor<Tp_, 1> {
-//     // Default constructor
-//     Vector() : Tensor<Tp_, 1>(size) {}
-
-//     // Constructor with elements
-//     template <class... Args>
-//     Vector(Args&&... args)
-//         : Tensor<Tp_, 1>(size) {
-//         this->data = {static_cast<Tp_>(std::forward<Args>(args))...};
-//     }    
-// };
 
 } // namespace TENSOR

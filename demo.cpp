@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     Object obj("C:/Users/soupup/Desktop/Alchemy/sources/cube.obj");
 
     obj.build_LinearBVH();
-    // obj.build_octTree();
+    obj.build_OCTree_from_BVH();
     obj.debug();
     return 0;
 }

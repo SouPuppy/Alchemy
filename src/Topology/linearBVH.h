@@ -1,5 +1,7 @@
 #pragma once
 
+namespace ALCHEMY {
+
 // Expands a 10-bit interger into 30 bits.
 uint expandBits(uint v) {
     v = (v * 0x00010001u) & 0xFF0000FFu;
@@ -12,20 +14,26 @@ uint expandBits(uint v) {
 // Calculates a 30-bit Morton code for the
 // given 3D point located within the unit cube [0,1].
 // Morton encoding function using std::clamp
-template<typename R>
-uint morton3D(R x, R y, R z) {
-    uint x_exp = expandBits(clamp(static_cast<int>(x * 1024), 0, 1023));
-    uint y_exp = expandBits(clamp(static_cast<int>(y * 1024), 0, 1023));
-    uint z_exp = expandBits(clamp(static_cast<int>(z * 1024), 0, 1023));
-    return (x_exp << 2) | (y_exp << 1) | z_exp;
-}
-
-// Calculates a 30-bit Morton code for the
-// given 3D point located within the unit cube [0,1].
-// Morton encoding function using std::clamp
 uint morton3D(Point3D p) {
     uint x_exp = expandBits(std::clamp(static_cast<int>(p[0] * 1024), 0, 1023));
     uint y_exp = expandBits(std::clamp(static_cast<int>(p[1] * 1024), 0, 1023));
     uint z_exp = expandBits(std::clamp(static_cast<int>(p[2] * 1024), 0, 1023));
     return (x_exp << 2) | (y_exp << 1) | z_exp;
 }
+
+Point3D centroid(Triangle tri) {
+    return (tri[0] + tri[1] + tri[2]) / 3;
+}
+
+AABB get_AABB(Triangle tri) {
+    AABB ret = AABB(tri[0], tri[0]);
+    for (int i = 1; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            ret[0][j] = std::min(ret[0][j], tri[i][j]);
+            ret[1][j] = std::max(ret[1][j], tri[i][j]);
+        }
+    }
+    return ret;
+}
+
+} // namespace ALCHEMY
